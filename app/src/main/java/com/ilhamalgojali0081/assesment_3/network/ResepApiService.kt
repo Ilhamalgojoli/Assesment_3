@@ -54,7 +54,7 @@ interface ResepApiService {
     suspend fun storeRecipes(
         @Part("title") title: RequestBody,
         @Part("description") description: RequestBody,
-        @Part("recipe_writer") recipe_writer: RequestBody,
+        @Part("recipe_writer") recipeWriter: RequestBody,
         @Part imageUrl: MultipartBody.Part,
         @Part("user_email") userEmail: RequestBody,
         @Part("created_at") createdAt: RequestBody,

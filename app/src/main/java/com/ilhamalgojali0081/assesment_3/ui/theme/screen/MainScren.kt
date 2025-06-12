@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ilhamalgojali0081.assesment_3.R
 import com.ilhamalgojali0081.assesment_3.network.ApiStatus
@@ -46,7 +47,11 @@ import com.ilhamalgojali0081.assesment_3.ui.theme.screen.viewModel.ResepViewMode
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: ResepViewModel = viewModel()) {
+
     var showDialogResep by remember { mutableStateOf(false) }
+
+    var viewModel: ResepViewModel = viewModel()
+    val errorMessage by viewModel.errorMessage
 
     Scaffold(
         topBar = {
@@ -75,9 +80,17 @@ fun MainScreen(viewModel: ResepViewModel = viewModel()) {
         )
         if (showDialogResep){
             ResepDialog(
-                onDismissRequest = { showDialogResep = false },
-                onConfirmation = {  }
-            )
+                onDismissRequest = { showDialogResep = false }
+            ) {
+              title, description, ingridient, bitmap -> viewModel.storeData(
+                  title = title,
+                  description = description,
+                  ingridient = ingridient,
+                  bitmap = bitmap,
+                  recipesWriter = ,
+                  userEmail = ,
+              )
+            }
         }
     }
 }
