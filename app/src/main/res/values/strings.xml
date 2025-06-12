@@ -13,4 +13,6 @@
 
     <string name="batal">Batal</string>
     <string name="simpan">Simpan</string>
+
+    <string name="tambah_resep">Tambah resep masakan</string>
 </resources>
