@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Assesment_3</string>
+
+    <string name="gambar">Gambar list</string>
+    <string name="error">Error</string>
+    <string name="try_again">Try again</string>
 </resources>
