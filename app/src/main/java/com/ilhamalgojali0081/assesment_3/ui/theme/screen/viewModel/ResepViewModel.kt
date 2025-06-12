@@ -63,6 +63,8 @@ class ResepViewModel: ViewModel() {
                 )
                 if (result.error == null)
                     retrieveData()
+                else
+                    throw Exception(result.message)
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Failure: ${e.message}")
                 errorMessage.value = "Error: ${e.message}"

@@ -15,4 +15,9 @@
     <string name="simpan">Simpan</string>
 
     <string name="tambah_resep">Tambah resep masakan</string>
+
+    <string name="tutup">Tutup</string>
+    <string name="logout">Logout</string>
+
+    <string name="profile">Profile</string>
 </resources>

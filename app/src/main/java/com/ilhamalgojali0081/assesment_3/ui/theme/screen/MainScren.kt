@@ -3,6 +3,7 @@ package com.ilhamalgojali0081.assesment_3.ui.theme.screen
 import android.content.Context
 import android.content.res.Configuration
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -54,6 +56,7 @@ import com.ilhamalgojali0081.assesment_3.network.ApiStatus
 import com.ilhamalgojali0081.assesment_3.network.UserDataStore
 import com.ilhamalgojali0081.assesment_3.ui.theme.Assesment_3Theme
 import com.ilhamalgojali0081.assesment_3.ui.theme.screen.component.ListResep
+import com.ilhamalgojali0081.assesment_3.ui.theme.screen.component.ProfileDialog
 import com.ilhamalgojali0081.assesment_3.ui.theme.screen.component.ResepDialog
 import com.ilhamalgojali0081.assesment_3.ui.theme.screen.viewModel.ResepViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -67,6 +70,7 @@ fun MainScreen() {
     val context = LocalContext.current
 
     var showDialogResep by remember { mutableStateOf(false) }
+    var showProfleDialog by remember { mutableStateOf(false) }
 
     val dataStore = UserDataStore(context)
     val user by dataStore.userFlow.collectAsState(User())
@@ -88,10 +92,18 @@ fun MainScreen() {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     signIn(context, dataStore)
                                 }
+                            } else {
+                                showProfleDialog = true
                             }
                         }
                     ) {
-
+                        Icon(
+                            painter = painterResource(
+                                R.drawable.baseline_account_circle_24
+                            ),
+                            contentDescription = stringResource(R.string.profile),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             )
@@ -124,6 +136,19 @@ fun MainScreen() {
                   userEmail = user.email,
               )
             }
+        }
+
+        if (showProfleDialog){
+            ProfileDialog(
+                user = user,
+                onDismissRequest = { showProfleDialog = false },
+                onCofirmation = {  }
+            )
+        }
+
+        if (errorMessage != null){
+            Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessage()
         }
     }
 }
