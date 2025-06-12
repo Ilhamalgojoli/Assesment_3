@@ -1,6 +1,8 @@
 package com.ilhamalgojali0081.assesment_3.ui.theme.screen
 
+import android.content.Context
 import android.content.res.Configuration
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +19,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -31,26 +34,43 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetCredentialResponse
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.ilhamalgojali0081.assesment_3.BuildConfig
 import com.ilhamalgojali0081.assesment_3.R
+import com.ilhamalgojali0081.assesment_3.model.User
 import com.ilhamalgojali0081.assesment_3.network.ApiStatus
+import com.ilhamalgojali0081.assesment_3.network.UserDataStore
 import com.ilhamalgojali0081.assesment_3.ui.theme.Assesment_3Theme
 import com.ilhamalgojali0081.assesment_3.ui.theme.screen.component.ListResep
 import com.ilhamalgojali0081.assesment_3.ui.theme.screen.component.ResepDialog
 import com.ilhamalgojali0081.assesment_3.ui.theme.screen.viewModel.ResepViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(viewModel: ResepViewModel = viewModel()) {
+fun MainScreen() {
+    val context = LocalContext.current
 
     var showDialogResep by remember { mutableStateOf(false) }
 
-    var viewModel: ResepViewModel = viewModel()
+    val dataStore = UserDataStore(context)
+    val user by dataStore.userFlow.collectAsState(User())
+    val viewModel: ResepViewModel = viewModel()
     val errorMessage by viewModel.errorMessage
 
     Scaffold(
@@ -60,7 +80,20 @@ fun MainScreen(viewModel: ResepViewModel = viewModel()) {
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary
-                )
+                ),
+                actions = {
+                    IconButton(
+                        onClick = {
+                            if (user.email.isEmpty()){
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    signIn(context, dataStore)
+                                }
+                            }
+                        }
+                    ) {
+
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -87,8 +120,8 @@ fun MainScreen(viewModel: ResepViewModel = viewModel()) {
                   description = description,
                   ingridient = ingridient,
                   bitmap = bitmap,
-                  recipesWriter = ,
-                  userEmail = ,
+                  recipesWriter = user.username,
+                  userEmail = user.email,
               )
             }
         }
@@ -148,6 +181,48 @@ fun ScreenContent(
         }
     }
 }
+
+private suspend fun signIn(context: Context, dataStore: UserDataStore) {
+    val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
+        .setFilterByAuthorizedAccounts(false)
+        .setServerClientId(BuildConfig.API_KEY)
+        .build()
+
+    val request: GetCredentialRequest = GetCredentialRequest.Builder()
+        .addCredentialOption(googleIdOption)
+        .build()
+
+    try {
+        val credentialManager = CredentialManager.create(context)
+        val result = credentialManager.getCredential(context, request)
+        handleSignIn(result, dataStore)
+    } catch (e: GetCredentialException) {
+        Log.e("SIGN-IN", "Error: ${e.errorMessage}")
+    }
+}
+
+private suspend fun handleSignIn(
+    result: GetCredentialResponse,
+    dataStore: UserDataStore
+) {
+    val credential = result.credential
+
+    if (credential is CustomCredential
+        && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL){
+        try {
+            val googleId = GoogleIdTokenCredential.createFrom(credential.data)
+            val username = googleId.displayName ?: ""
+            val email = googleId.id
+            val photoUrl = googleId.profilePictureUri.toString()
+            dataStore.saveData(User(username, email, photoUrl))
+        } catch (e: GoogleIdTokenParsingException){
+            Log.e("SIGN-IN", "Error: ${e.message}")
+        }
+    } else {
+        Log.e("SIGN-IN", "Error: unrecognized custom credential type.")
+    }
+}
+
 
 
 @Preview(showBackground = true)
