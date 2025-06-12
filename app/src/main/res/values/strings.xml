@@ -4,4 +4,13 @@
     <string name="gambar">Gambar list</string>
     <string name="error">Error</string>
     <string name="try_again">Try again</string>
+
+    <string name="nama">Nama resep</string>
+    <string name="deskripsi">Deskripsi resep</string>
+    <string name="bahan_bahan">Bahan bahan</string>
+
+    <string name="upload">Tambah gambar</string>
+
+    <string name="batal">Batal</string>
+    <string name="simpan">Simpan</string>
 </resources>
