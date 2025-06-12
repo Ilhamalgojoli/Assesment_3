@@ -40,10 +40,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
+import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
@@ -142,7 +144,12 @@ fun MainScreen() {
             ProfileDialog(
                 user = user,
                 onDismissRequest = { showProfleDialog = false },
-                onCofirmation = {  }
+                onCofirmation = {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        signOut(context, dataStore)
+                    }
+                    showDialogResep = false
+                }
             )
         }
 
@@ -248,7 +255,16 @@ private suspend fun handleSignIn(
     }
 }
 
-
+private suspend fun signOut(context: Context, dataStore: UserDataStore){
+    try {
+        val credentialManagere = CredentialManager.create(context)
+        credentialManagere.clearCredentialState(
+            ClearCredentialStateRequest()
+        )
+    } catch (e: ClearCredentialException){
+        Log.e("SIGN-IN", "Error: ${e.message}")
+    }
+}
 
 @Preview(showBackground = true)
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
