@@ -1,87 +1,87 @@
 package com.ilhamalgojali0081.assesment_3.network
 
-import com.ilhamalgojali0081.assesment_3.model.OpStatus
+import android.content.Context
 import com.ilhamalgojali0081.assesment_3.model.Resep
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Path
+import java.util.concurrent.TimeUnit
 
-private const val BASE_URL = "https://xhplpylngwijhzoaemkq.supabase.co/rest/v1/"
-private const val API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6" +
-        "InhocGxweWxuZ3dpamh6b2FlbWtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2OTg0OTAsImV4cCI6MjA2NT" +
-        "I3NDQ5MH0.tIn3D-JRfHJJSZqKOj3NWoyC_sIUXafOAFzzhzXbEG8"
-
-private fun apiKeyAsHeader(it: Interceptor.Chain) = it.proceed(
-    it.request()
-        .newBuilder()
-        .addHeader("apikey", API_KEY)
-        .addHeader("Authorization", "Bearer $API_KEY")
-        .addHeader("Content-Type", "application/json")
-        .build()
-)
-
-private val okHttpClient = OkHttpClient.Builder()
-    .addInterceptor{ apiKeyAsHeader(it) }
-    .build()
+private const val BASE_URL = "https://resep-makanan.azurewebsites.net/api/"
 
 private val moshi = Moshi.Builder()
     .add(KotlinJsonAdapterFactory())
     .build()
 
-private val retrofit = Retrofit.Builder()
-    .client(okHttpClient)
-    .addConverterFactory(MoshiConverterFactory.create(moshi))
-    .baseUrl(BASE_URL)
-    .build()
+class ResepApi(appContext: Context) {
+    private val applicationContext = appContext.applicationContext
+
+    private val authInterceptor = Interceptor { chain ->
+        val requestBuilder = chain.request().newBuilder()
+        val userEmail = runBlocking {
+            UserDataStore(applicationContext).userFlow.first().email
+        }
+        if (userEmail.isNotEmpty()) {
+            requestBuilder.addHeader("Authorization", "Bearer $userEmail")
+        }
+        chain.proceed(requestBuilder.build())
+    }
+
+    private val okHttpClient = OkHttpClient.Builder()
+        .addInterceptor(authInterceptor)
+        .addInterceptor(HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        })
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+    private val retrofit: Retrofit = Retrofit.Builder()
+        .baseUrl(BASE_URL)
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .client(okHttpClient)
+        .build()
+
+    val service: ResepApiService = retrofit.create(ResepApiService::class.java)
+}
 
 interface ResepApiService {
     @GET("recipes")
     suspend fun getRecipes(): List<Resep>
 
-    @POST("recipes")
-    suspend fun storeRecipes(
-        @Part("title") title: RequestBody,
-        @Part("description") description: RequestBody,
-        @Part("recipe_writer") recipeWriter: RequestBody,
-        @Part imageUrl: MultipartBody.Part,
-        @Part("user_email") userEmail: RequestBody,
-        @Part("created_at") createdAt: RequestBody,
-        @Part("ingridient") ingridient: RequestBody,
-    ): OpStatus
+    @GET("recipes/{id}")
+    suspend fun getRecipeById(@Path("id") id: String): Resep
 
+    @Multipart
+    @POST("recipes")
+    suspend fun addRecipe(
+        @Part("recipeData") recipeData: RequestBody,
+        @Part image: MultipartBody.Part
+    ): Resep
+
+    @Multipart
     @PUT("recipes/{id}")
-    suspend fun editRecipes(
-        @Path("id") id: Int,
-        @Part("title") title: RequestBody,
-        @Part("description") description: RequestBody,
-        @Part image_url: MultipartBody.Part,
-        @Part("update_at") updateAt: RequestBody,
-        @Part("ingridient") ingridient: RequestBody
-    ):OpStatus
+    suspend fun updateRecipe(
+        @Path("id") id: String,
+        @Part("recipeData") recipeData: RequestBody,
+        @Part image: MultipartBody.Part?
+    ): Resep
 
     @DELETE("recipes/{id}")
-    suspend fun deleteRecipes(
-        @Path("id")id: Int,
-        @Body resep: Resep
-    ): OpStatus
+    suspend fun deleteRecipe(@Path("id") id: String)
 }
-
-object ResepApi{
-    val service: ResepApiService by lazy {
-        retrofit.create(ResepApiService::class.java)
-    }
-}
-
-enum class ApiStatus{ LOADING, SUCCESS, FAILED }
