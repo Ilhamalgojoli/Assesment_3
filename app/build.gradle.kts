@@ -51,7 +51,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -61,16 +60,23 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
     implementation(libs.retrofit)
     implementation(libs.converter.moshi)
     implementation(libs.moshi.kotlin)
-    implementation(libs.coil.compose)
+
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.exifinterface:exifinterface:1.3.6")
+
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.android.image.cropper)
 
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.service.auth)
     implementation(libs.googleid)
+
+    implementation(libs.androidx.navigation.compose.android)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

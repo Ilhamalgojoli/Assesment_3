@@ -1,7 +1,6 @@
 package com.ilhamalgojali0081.assesment_3.model
 
-data class Resep(
-    val id: String,
+data class ResepRequest(
     val title: String,
     val description: String,
     val ingredients: String,
@@ -9,4 +8,3 @@ data class Resep(
     val user_email: String,
     val user_name: String
 )
-

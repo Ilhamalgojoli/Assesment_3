@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Assesment_3</string>
+    <string name="app_name">Resep Makanan</string>
 
     <string name="gambar">Gambar list</string>
     <string name="error">Error</string>
@@ -20,4 +20,25 @@
     <string name="logout">Logout</string>
 
     <string name="profile">Profile</string>
+    <string name="gambar_belum_ada">Tidak ada gambar</string>
+    <string name="no_recipes_found">Tidak ada resep</string>
+
+    <string name="select_image_button">Select</string>
+    <string name="recipe_updated_success">Update success</string>
+
+    <string name="recipe_detail_title">Detail Resep</string>
+    <string name="back_button_desc">Tombol Kembali</string>
+    <string name="ingredients_section">Bahan-bahan</string>
+    <string name="description_section">Deskripsi</string>
+    <string name="posted_by">Diposting oleh: %1$s (%2$s)</string>
+    <string name="edit_recipe_button">Edit Resep</string>
+    <string name="delete_recipe_button">Hapus Resep</string>
+    <string name="confirm_delete_title">Konfirmasi Hapus</string>
+    <string name="confirm_delete_message">Anda yakin ingin menghapus resep ini?</string>
+    <string name="yes">Ya</string>
+    <string name="no">Tidak</string>
+    <string name="recipe_deleted_success">Resep berhasil dihapus!</string>
+    <string name="failed_delete_recipe">Gagal menghapus resep.</string>
+    <string name="loading_recipe">Memuat resep...</string>
+    <string name="error_loading_recipe">Gagal memuat resep: %1$s</string>
 </resources>
