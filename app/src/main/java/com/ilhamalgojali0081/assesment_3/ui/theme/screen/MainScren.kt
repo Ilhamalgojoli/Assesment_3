@@ -1,9 +1,14 @@
 package com.ilhamalgojali0081.assesment_3.ui.theme.screen
 
+import ResepViewModelFactory
 import android.content.Context
 import android.content.res.Configuration
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,19 +53,20 @@ import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.ilhamalgojali0081.assesment_3.BuildConfig
 import com.ilhamalgojali0081.assesment_3.R
 import com.ilhamalgojali0081.assesment_3.model.User
-import com.ilhamalgojali0081.assesment_3.network.ApiStatus
 import com.ilhamalgojali0081.assesment_3.network.UserDataStore
 import com.ilhamalgojali0081.assesment_3.ui.theme.Assesment_3Theme
 import com.ilhamalgojali0081.assesment_3.ui.theme.screen.component.ListResep
 import com.ilhamalgojali0081.assesment_3.ui.theme.screen.component.ProfileDialog
 import com.ilhamalgojali0081.assesment_3.ui.theme.screen.component.ResepDialog
-import com.ilhamalgojali0081.assesment_3.ui.theme.screen.viewModel.ResepViewModel
+import com.ilhamalgojali0081.assesment_3.viewmodel.ResepUiState
+import com.ilhamalgojali0081.assesment_3.viewmodel.ResepViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -68,16 +74,41 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(navController: NavController) {
     val context = LocalContext.current
-
-    var showDialogResep by remember { mutableStateOf(false) }
-    var showProfleDialog by remember { mutableStateOf(false) }
-
     val dataStore = UserDataStore(context)
     val user by dataStore.userFlow.collectAsState(User())
-    val viewModel: ResepViewModel = viewModel()
-    val errorMessage by viewModel.errorMessage
+
+    val viewModel: ResepViewModel = viewModel(factory = ResepViewModelFactory())
+    LaunchedEffect(context) {
+        viewModel.initContext(context)
+    }
+
+    var showResepDialog by remember { mutableStateOf(false) }
+    var showProfileDialog by remember { mutableStateOf(false) }
+
+    var selectedImageUri: Uri? by remember { mutableStateOf(null) }
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()) { uri: Uri? ->
+        selectedImageUri = uri
+        if (selectedImageUri != null) {
+            showResepDialog = true
+        } else {
+            Toast.makeText(context, "Tidak ada gambar terpilih. Silakan " +
+                    "coba lagi.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val actionMessage by viewModel.actionMessage.collectAsState()
+    LaunchedEffect(actionMessage) {
+        actionMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearActionMessage()
+        }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.loadRecipes()
+    }
 
     Scaffold(
         topBar = {
@@ -90,19 +121,17 @@ fun MainScreen() {
                 actions = {
                     IconButton(
                         onClick = {
-                            if (user.email.isEmpty()){
+                            if (user.email.isEmpty()) {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     signIn(context, dataStore)
                                 }
                             } else {
-                                showProfleDialog = true
+                                showProfileDialog = true
                             }
                         }
                     ) {
                         Icon(
-                            painter = painterResource(
-                                R.drawable.baseline_account_circle_24
-                            ),
+                            painter = painterResource(R.drawable.baseline_account_circle_24),
                             contentDescription = stringResource(R.string.profile),
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -112,7 +141,10 @@ fun MainScreen() {
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showDialogResep = true }
+                onClick = {
+                    selectedImageUri = null
+                    imagePickerLauncher.launch("image/*")
+                }
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -123,39 +155,52 @@ fun MainScreen() {
     ) { innerPadding ->
         ScreenContent(
             viewModel = viewModel,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            onRecipeClick = { recipeId ->
+                navController.navigate("recipeDetail/${recipeId}")
+            }
         )
-        if (showDialogResep){
-            ResepDialog(
-                onDismissRequest = { showDialogResep = false }
-            ) {
-              title, description, ingridient, bitmap -> viewModel.storeData(
-                  title = title,
-                  description = description,
-                  ingridient = ingridient,
-                  bitmap = bitmap,
-                  recipesWriter = user.username,
-                  userEmail = user.email,
-              )
+
+        if (showResepDialog) {
+            val currentUri = selectedImageUri
+            if (currentUri != null) {
+                ResepDialog(
+                    initialImageUri = currentUri,
+                    initialRecipe = null,
+                    onDismissRequest = {
+                        showResepDialog = false
+                        selectedImageUri = null
+                    }
+                ) { recipeIdFromDialog, title, description, ingredient, finalUri ->
+                    viewModel.addRecipe(
+                        title = title,
+                        description = description,
+                        ingredient = ingredient,
+                        imageUri = finalUri,
+                        userName = user.username,
+                        userEmail = user.email
+                    )
+                    showResepDialog = false
+                    selectedImageUri = null
+                }
+            } else {
+                Toast.makeText(context, "Terjadi masalah dengan gambar. " +
+                        "Silakan coba lagi.", Toast.LENGTH_SHORT).show()
+                showResepDialog = false
             }
         }
 
-        if (showProfleDialog){
+        if (showProfileDialog) {
             ProfileDialog(
                 user = user,
-                onDismissRequest = { showProfleDialog = false },
+                onDismissRequest = { showProfileDialog = false },
                 onCofirmation = {
                     CoroutineScope(Dispatchers.IO).launch {
                         signOut(context, dataStore)
                     }
-                    showDialogResep = false
+                    showProfileDialog = false
                 }
             )
-        }
-
-        if (errorMessage != null){
-            Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
-            viewModel.clearMessage()
         }
     }
 }
@@ -163,49 +208,54 @@ fun MainScreen() {
 @Composable
 fun ScreenContent(
     viewModel: ResepViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRecipeClick: (String) -> Unit
 ) {
-    val data by viewModel.data
-    val status by viewModel.status.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.retrieveData()
-    }
-
-    when (status) {
-        ApiStatus.LOADING -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+    when (uiState) {
+        is ResepUiState.Loading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
-
-        ApiStatus.SUCCESS -> {
-            LazyVerticalGrid(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(4.dp),
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(data) { resep ->
-                    ListResep(resep = resep)
+        is ResepUiState.Success -> {
+            val recipes = (uiState as ResepUiState.Success).recipes
+            if (recipes.isEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = stringResource(R.string.no_recipes_found))
+                }
+            } else {
+                LazyVerticalGrid(
+                    modifier = modifier.fillMaxSize(),
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(4.dp)
+                ) {
+                    items(recipes) { resep ->
+                        ListResep(
+                            resep = resep,
+                            modifier = Modifier.clickable { onRecipeClick(resep.id) }
+                        )
+                    }
                 }
             }
         }
-
-        ApiStatus.FAILED -> {
+        is ResepUiState.Error -> {
+            val errorMessage = (uiState as ResepUiState.Error).message
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = stringResource(R.string.error))
+                Text(text = "Error: $errorMessage")
                 Button(
-                    onClick = { viewModel.retrieveData() },
-                    modifier = Modifier.padding(top = 16.dp)
+                    onClick = { viewModel.loadRecipes() },
+                    modifier = Modifier.padding(top = 16.dp),
+                    contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
                 ) {
                     Text(text = stringResource(id = R.string.try_again))
                 }
@@ -230,6 +280,7 @@ private suspend fun signIn(context: Context, dataStore: UserDataStore) {
         handleSignIn(result, dataStore)
     } catch (e: GetCredentialException) {
         Log.e("SIGN-IN", "Error: ${e.errorMessage}")
+        Toast.makeText(context, "Sign-in error: ${e.errorMessage}", Toast.LENGTH_LONG).show()
     }
 }
 
@@ -248,21 +299,24 @@ private suspend fun handleSignIn(
             val photoUrl = googleId.profilePictureUri.toString()
             dataStore.saveData(User(username, email, photoUrl))
         } catch (e: GoogleIdTokenParsingException){
-            Log.e("SIGN-IN", "Error: ${e.message}")
+            Log.e("SIGN-IN", "Error parsing Google ID token: ${e.message}")
         }
     } else {
         Log.e("SIGN-IN", "Error: unrecognized custom credential type.")
     }
 }
 
-private suspend fun signOut(context: Context, dataStore: UserDataStore){
+private suspend fun signOut(context: Context, dataStore: UserDataStore) {
     try {
-        val credentialManagere = CredentialManager.create(context)
-        credentialManagere.clearCredentialState(
+        val credentialManager = CredentialManager.create(context)
+        credentialManager.clearCredentialState(
             ClearCredentialStateRequest()
         )
+        dataStore.saveData(User())
+        Toast.makeText(context, "Signed out successfully!", Toast.LENGTH_SHORT).show()
     } catch (e: ClearCredentialException){
-        Log.e("SIGN-IN", "Error: ${e.message}")
+        Log.e("SIGN-IN", "Error signing out: ${e.message}")
+        Toast.makeText(context, "Sign-out error: ${e.errorMessage}", Toast.LENGTH_LONG).show()
     }
 }
 
@@ -271,6 +325,6 @@ private suspend fun signOut(context: Context, dataStore: UserDataStore){
 @Composable
 fun MainScreenPreview() {
     Assesment_3Theme {
-        MainScreen()
+        MainScreen(navController = NavController(LocalContext.current))
     }
 }
