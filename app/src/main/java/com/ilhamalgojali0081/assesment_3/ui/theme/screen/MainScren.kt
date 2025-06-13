@@ -245,13 +245,12 @@ fun ScreenContent(
             }
         }
         is ResepUiState.Error -> {
-            val errorMessage = (uiState as ResepUiState.Error).message
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "Error: $errorMessage")
+                Text(text = "Error failed to connect")
                 Button(
                     onClick = { viewModel.loadRecipes() },
                     modifier = Modifier.padding(top = 16.dp),
