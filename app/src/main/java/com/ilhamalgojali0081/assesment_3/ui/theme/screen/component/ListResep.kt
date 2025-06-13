@@ -24,9 +24,9 @@ import com.ilhamalgojali0081.assesment_3.R
 import com.ilhamalgojali0081.assesment_3.model.Resep
 
 @Composable
-fun ListResep(resep: Resep) {
+fun ListResep(resep: Resep, modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .padding(4.dp)
             .border(1.dp, Color.Gray),
         contentAlignment = Alignment.BottomCenter
